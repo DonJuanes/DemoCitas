@@ -15,14 +15,17 @@ async function reservarCita(datos) {
   reglas.validarDatosCompletos(datos);
   reglas.validarFechaFutura(datos.fecha_hora);
 
-  const ocupado = await citaRepository.existeEnHorario(
-    datos.profesional_id,
-    datos.fecha_hora
-  );
-  reglas.validarAgendaLibre(ocupado);
-
-  const id = await citaRepository.guardar(datos);
-  return { mensaje: 'Cita creada', id };
+  try {
+    const id = await citaRepository.guardar(datos);
+    return { mensaje: 'Cita creada', id };
+  } catch (error) {
+    if (error.esConflictoDeAgenda) {
+      // El dominio sigue siendo quien decide que esto es un error de negocio;
+      // solo cambió quién detecta el conflicto (antes: 2 consultas; ahora: la BD).
+      reglas.validarAgendaLibre(true);
+    }
+    throw error;
+  }
 }
 
 module.exports = { consultarCitas, consultarProfesionales, reservarCita };
