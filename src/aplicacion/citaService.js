@@ -1,31 +1,41 @@
 // Casos de uso de citas: coordinan las reglas del dominio y los repositorios.
+// Los repositorios llegan por parámetro (inyección de dependencias); este
+// módulo solo conoce el contrato, no la implementación PostgreSQL.
 const reglas = require('../dominio/reglasDeAgenda');
-const citaRepository = require('../persistencia/citaRepository');
-const profesionalRepository = require('../persistencia/profesionalRepository');
+const {
+  asegurarRepositorioDeCitas,
+  asegurarRepositorioDeProfesionales,
+} = require('./contratos/repositorios');
 
-async function consultarCitas() {
-  return citaRepository.listarTodas();
-}
+function crearCitaService({ citaRepository, profesionalRepository }) {
+  asegurarRepositorioDeCitas(citaRepository);
+  asegurarRepositorioDeProfesionales(profesionalRepository);
 
-async function consultarProfesionales() {
-  return profesionalRepository.listarTodos();
-}
-
-async function reservarCita(datos) {
-  reglas.validarDatosCompletos(datos);
-  reglas.validarFechaFutura(datos.fecha_hora);
-
-  try {
-    const id = await citaRepository.guardar(datos);
-    return { mensaje: 'Cita creada', id };
-  } catch (error) {
-    if (error.esConflictoDeAgenda) {
-      // El dominio sigue siendo quien decide que esto es un error de negocio;
-      // solo cambió quién detecta el conflicto (antes: 2 consultas; ahora: la BD).
-      reglas.validarAgendaLibre(true);
-    }
-    throw error;
+  async function consultarCitas() {
+    return citaRepository.listarTodas();
   }
+
+  async function consultarProfesionales() {
+    return profesionalRepository.listarTodos();
+  }
+
+  async function reservarCita(datos) {
+    reglas.validarDatosCompletos(datos);
+    reglas.validarFechaFutura(datos.fecha_hora);
+
+    try {
+      const id = await citaRepository.guardar(datos);
+      return { mensaje: 'Cita creada', id };
+    } catch (error) {
+      if (error.esConflictoDeAgenda) {
+        // El dominio sigue decidiendo que esto es un error de negocio.
+        reglas.validarAgendaLibre(true);
+      }
+      throw error;
+    }
+  }
+
+  return { consultarCitas, consultarProfesionales, reservarCita };
 }
 
-module.exports = { consultarCitas, consultarProfesionales, reservarCita };
+module.exports = { crearCitaService };
