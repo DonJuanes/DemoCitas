@@ -11,7 +11,7 @@ const CODIGO_HTTP = {
   AGENDA_OCUPADA: 409,
 };
 
-function crearCitasRouter(citaService) {
+function crearCitasRoutes(citaService) {
   const router = express.Router();
 
   router.get('/salud', (req, res) => {
@@ -53,4 +53,4 @@ function crearCitasRouter(citaService) {
   return router;
 }
 
-module.exports = { crearCitasRouter };
+module.exports = { crearCitasRoutes };
